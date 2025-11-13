@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 2, 10);
+      camera.lookAt(0, 0, 0);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const wallGeometry = new THREE.BoxGeometry(1, 2, 1);
+      const jumpGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const platformGeometry = new THREE.BoxGeometry(5, 1, 15);
+      const mainGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+      const material = new THREE.MeshStandardMaterial({ color: 0x00ffff });
+      const obstacleMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff0000,
+      });
+      const platformMaterial = new THREE.MeshStandardMaterial({
+        color: 0xeeffff,
+      });
+
+      const mainBox = new THREE.Box3();
+      const obstacleBox = new THREE.Box3();
+      const jumpObstacleBox = new THREE.Box3();
+
+      const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+      const obstacle = new THREE.Mesh(wallGeometry, obstacleMaterial);
+      const main = new THREE.Mesh(mainGeometry, material);
+      const jumpObstacle = new THREE.Mesh(jumpGeometry, obstacleMaterial);
+
+      scene.add(platform);
+      scene.add(obstacle);
+      scene.add(main);
+      scene.add(jumpObstacle);
+      main.position.set(0, 1, 7);
+      obstacle.position.set(0, 1, 0);
+      jumpObstacle.position.set(0, 1, -5);
+
+      const light = new THREE.PointLight(0xffffff, 10);
+      light.position.set(0, 4, 10);
+      scene.add(light);
+      var jump = false;
+      var turnRight = false;
+      var turnLeft = false;
+      var djump = 0.04;
+      var goal;
+      var gameOver = false;
+      var score = 0;
+      const obstacles = [obstacle, jumpObstacle];
+      const obstacleBoxes = [obstacleBox, jumpObstacleBox];
+      function animate() {
+        const id = requestAnimationFrame(animate);
+        if (gameOver) return;
+        score++;
+        obstacles.forEach((e) => {
+          if (e.position.z < 7) {
+            e.position.z += 0.1;
+          } else {
+            e.position.z = 0;
+            e.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+          }
+        });
+
+        mainBox.setFromObject(main);
+        obstacleBox.setFromObject(obstacle);
+        jumpObstacleBox.setFromObject(jumpObstacle);
+        obstacleBoxes.forEach((e) => {
+          if (mainBox.intersectsBox(e)) {
+            gameOver = true;
+            cancelAnimationFrame(id);
+            console.log("You've been hit!!! and score is", score);
+            alert(`You've been hit!! but scored ${score}!!!`);
+          }
+        });
+        // console.log(main.position.x);
+        if (jump) {
+          main.rotation.x += -0.1;
+          main.position.y <= 2.5 ? (djump = djump) : (djump = -djump);
+          if (main.position.y >= 1) {
+            main.position.y += djump;
+          } else {
+            main.rotation.x = 0;
+            jump = false;
+          }
+        }
+        if (turnRight) {
+          switch (main.position.x) {
+            case 0:
+              goal = 1;
+              break;
+            case -1:
+              goal = 0;
+              break;
+
+            default:
+              break;
+          }
+          // console.log(goal);
+
+          if (main.position.x < goal) {
+            main.position.x += 0.1;
+            main.rotation.y += 0.11;
+          } else {
+            main.position.x = goal;
+            main.rotation.y = 0;
+            turnRight = false;
+          }
+        }
+        if (turnLeft) {
+          switch (main.position.x) {
+            case 0:
+              goal = -1;
+              break;
+            case 1:
+              goal = 0;
+              break;
+
+            default:
+              break;
+          }
+          // console.log(goal);
+
+          if (main.position.x > goal) {
+            main.position.x -= 0.1;
+            main.rotation.y -= 0.11;
+          } else {
+            main.position.x = goal;
+            main.rotation.y = 0;
+            turnLeft = false;
+          }
+        }
+        userInputFunction();
+        renderer.render(scene, camera);
+      }
+      function userInputFunction() {
+        document.addEventListener("keydown", (e) => {
+          switch (e.key) {
+            case "ArrowUp":
+              main.position.y = 1;
+              main.rotation.x = 0;
+              djump = Math.abs(djump);
+              jump = true;
+              break;
+            case "ArrowRight":
+              turnRight = true;
+
+              break;
+            case "ArrowLeft":
+              turnLeft = true;
+
+              break;
+
+            default:
+              // console.log(e);
+              break;
+          }
+        });
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
