@@ -13,8 +13,8 @@
   </head>
   <body>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-
     <script>
+      alert("Welcome to my 3d game!!!!! The goal is to catch the yellow ball without getting hit. Use the arrow keys or swipe to avoid obstacles on the way. Good luck!")
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         75,
@@ -22,7 +22,7 @@
         0.1,
         1000
       );
-      camera.position.set(0, 2, 10);
+      camera.position.set(0, 2.5, 10);
       camera.lookAt(0, 0, 0);
       const renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
@@ -30,6 +30,7 @@
 
       const wallGeometry = new THREE.BoxGeometry(1, 2, 1);
       const jumpGeometry = new THREE.BoxGeometry(1, 1, 1);
+      const getItShapeGeometry = new THREE.SphereGeometry(0.1, 37, 37);
       const platformGeometry = new THREE.BoxGeometry(5, 1, 15);
       const mainGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
       const material = new THREE.MeshStandardMaterial({ color: 0x00ffff });
@@ -39,23 +40,31 @@
       const platformMaterial = new THREE.MeshStandardMaterial({
         color: 0xeeffff,
       });
+      const getItShapeMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffff00,
+      });
 
       const mainBox = new THREE.Box3();
       const obstacleBox = new THREE.Box3();
       const jumpObstacleBox = new THREE.Box3();
+      const getItShapeBox = new THREE.Box3();
 
       const platform = new THREE.Mesh(platformGeometry, platformMaterial);
       const obstacle = new THREE.Mesh(wallGeometry, obstacleMaterial);
       const main = new THREE.Mesh(mainGeometry, material);
       const jumpObstacle = new THREE.Mesh(jumpGeometry, obstacleMaterial);
+      const getItShape = new THREE.Mesh(getItShapeGeometry, getItShapeMaterial);
 
       scene.add(platform);
       scene.add(obstacle);
       scene.add(main);
       scene.add(jumpObstacle);
+      scene.add(getItShape);
+      
       main.position.set(0, 1, 7);
       obstacle.position.set(0, 1, 0);
       jumpObstacle.position.set(0, 1, -5);
+      getItShape.position.set(0, 2, -5);
 
       const light = new THREE.PointLight(0xffffff, 10);
       light.position.set(0, 4, 10);
@@ -69,22 +78,31 @@
       var score = 0;
       const obstacles = [obstacle, jumpObstacle];
       const obstacleBoxes = [obstacleBox, jumpObstacleBox];
+      
       function animate() {
         const id = requestAnimationFrame(animate);
         if (gameOver) return;
         score++;
         obstacles.forEach((e) => {
           if (e.position.z < 7) {
-            e.position.z += 0.1;
+            e.position.z += 0.05;
           } else {
             e.position.z = 0;
             e.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
           }
         });
+        
+        if (getItShape.position.z < 10) {
+            getItShape.position.z += 0.1;
+          } else {
+            getItShape.position.z = 0;
+            getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+          }
 
         mainBox.setFromObject(main);
         obstacleBox.setFromObject(obstacle);
         jumpObstacleBox.setFromObject(jumpObstacle);
+        getItShapeBox.setFromObject(getItShape);
         obstacleBoxes.forEach((e) => {
           if (mainBox.intersectsBox(e)) {
             gameOver = true;
@@ -93,6 +111,12 @@
             alert(`You've been hit!! but scored ${score}!!!`);
           }
         });
+        if (mainBox.intersectsBox(getItShapeBox)) {
+            gameOver = true;
+            cancelAnimationFrame(id);
+            console.log("You've caught it!!! with a score of", score);
+            alert(`You've caught it!!! with a score of ${score}!!!`);
+          }
         // console.log(main.position.x);
         if (jump) {
           main.rotation.x += -0.1;
@@ -153,7 +177,30 @@
         userInputFunction();
         renderer.render(scene, camera);
       }
+      var clientX, clientY, dClientX, dClientY;
       function userInputFunction() {
+        document.addEventListener("touchstart", (e) => {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      })
+        document.addEventListener("touchend", (e) => {
+        dClientX = e.changedTouches[0].clientX - clientX;
+        dClientY = e.changedTouches[0].clientY - clientY;
+        console.log(dClientX)
+        console.log(dClientY)
+        if (dClientY <= -100){
+          main.position.y = 1;
+              main.rotation.x = 0;
+              djump = Math.abs(djump);
+              jump = true;
+        }
+        if (dClientX >= 100){
+          turnRight = true;
+        }
+        if (dClientX <= -100){
+          turnLeft = true;
+        }
+      })
         document.addEventListener("keydown", (e) => {
           switch (e.key) {
             case "ArrowUp":
