@@ -12,9 +12,12 @@
     </style>
   </head>
   <body>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script> -->
+    <script src="three.min.js"></script>
     <script>
-      alert("Welcome to my 3d game!!!!! The goal is to catch the yellow ball without getting hit. Use the arrow keys or swipe to avoid obstacles on the way. Good luck!")
+      alert(
+        "Welcome to my 3d game!!!!! The goal is to catch the yellow ball without getting hit. Use the arrow keys or swipe to avoid obstacles on the way. Good luck!"
+      );
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(
         75,
@@ -33,7 +36,7 @@
       const getItShapeGeometry = new THREE.SphereGeometry(0.1, 37, 37);
       const platformGeometry = new THREE.BoxGeometry(5, 1, 15);
       const mainGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-      const material = new THREE.MeshStandardMaterial({ color: 0x00ffff });
+      const material = new THREE.MeshStandardMaterial({ color: 0x30ff30 });
       const obstacleMaterial = new THREE.MeshStandardMaterial({
         color: 0xff0000,
       });
@@ -43,6 +46,58 @@
       const getItShapeMaterial = new THREE.MeshBasicMaterial({
         color: 0xffff00,
       });
+
+      // text part
+      const canvas = document.createElement("canvas");
+      // canvas.width = 512;
+      // canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+
+      function setText(text, color) {
+        let lineHeight = 20;
+        let maxWidth = 200;
+        ctx.font = "20px Arial";
+        // canvas.width = maxWidth + 20;
+
+        let words = text.split(" ");
+        let lines = [];
+        let currentLine = words[0];
+
+        for (let i = 1; i < words.length; i++) {
+          let testLine = currentLine + " " + words[i];
+          let metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth) {
+            lines.push(currentLine);
+            currentLine = words[i];
+          } else {
+            currentLine = testLine;
+          }
+        }
+        lines.push(currentLine);
+        let topPadding = 20;
+        let bottomPadding = 20;
+        canvas.height = topPadding + lines.length * lineHeight + bottomPadding;
+
+        // ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = color;
+        ctx.font = "20px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        for (let i = 0; i < lines.length; i++) {
+          let y = topPadding + i * lineHeight;
+          ctx.fillText(lines[i], canvas.width / 2, y);
+        }
+        texture.needsUpdate = true;
+      }
+
+      const texture = new THREE.CanvasTexture(canvas);
+
+      const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(4, 2),
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true })
+      );
+      scene.add(plane);
+      plane.position.set(0, 3, 3);
 
       const mainBox = new THREE.Box3();
       const obstacleBox = new THREE.Box3();
@@ -60,11 +115,17 @@
       scene.add(main);
       scene.add(jumpObstacle);
       scene.add(getItShape);
-      
+
       main.position.set(0, 1, 7);
-      obstacle.position.set(0, 1, 0);
-      jumpObstacle.position.set(0, 1, -5);
-      getItShape.position.set(0, 2, -5);
+      obstacle.position.z = -25;
+      jumpObstacle.position.z = -15;
+      getItShape.position.set(0, 2, -35);
+
+      const obstacles = [obstacle, jumpObstacle];
+      obstacles.forEach((e) => {
+        e.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        e.position.y = 1;
+      });
 
       const light = new THREE.PointLight(0xffffff, 10);
       light.position.set(0, 4, 10);
@@ -73,12 +134,16 @@
       var turnRight = false;
       var turnLeft = false;
       var djump = 0.04;
+      var dbounce = 0.1;
       var goal;
       var gameOver = false;
       var score = 0;
-      const obstacles = [obstacle, jumpObstacle];
       const obstacleBoxes = [obstacleBox, jumpObstacleBox];
-      
+      var catches = 0;
+      var goalCatches = 5;
+      var bounceBack = false;
+      setText(`You've caught ${catches} / ${goalCatches}`, "yellow");
+
       function animate() {
         const id = requestAnimationFrame(animate);
         if (gameOver) return;
@@ -87,37 +152,71 @@
           if (e.position.z < 7) {
             e.position.z += 0.05;
           } else {
-            e.position.z = 0;
+            e.position.z = -5;
             e.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
           }
         });
-        
-        if (getItShape.position.z < 10) {
-            getItShape.position.z += 0.1;
-          } else {
-            getItShape.position.z = 0;
-            getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
-          }
 
         mainBox.setFromObject(main);
         obstacleBox.setFromObject(obstacle);
         jumpObstacleBox.setFromObject(jumpObstacle);
-        getItShapeBox.setFromObject(getItShape);
+
+        if (bounceBack) {
+          if (getItShape.position.z >= -15) {
+            getItShape.position.z -= 0.1;
+            getItShape.position.y -= dbounce;
+            if (getItShape.position.y <= 1) {
+              dbounce = -dbounce;
+              catches++;
+            }
+          } else {
+            getItShape.position.y = 2;
+            bounceBack = false;
+            dbounce = Math.abs(dbounce);
+            getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+          }
+        } else {
+          getItShapeBox.setFromObject(getItShape);
+          if (getItShape.position.z < 10) {
+            getItShape.position.z += 0.1;
+          } else {
+            getItShape.position.z = -10;
+            getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+          }
+        }
+
         obstacleBoxes.forEach((e) => {
           if (mainBox.intersectsBox(e)) {
+            // cancelAnimationFrame(id);
+            // console.log("You've been hit!!! and score is", score);
+            setText(
+              `You've been hit!!   But scored ${score} and you've caught ${catches} / ${goalCatches}`,
+              "red"
+            );
+            alert(
+              `You've been hit!!   But scored ${score} and you've caught ${catches} / ${goalCatches}`,
+              "red"
+            );
             gameOver = true;
-            cancelAnimationFrame(id);
-            console.log("You've been hit!!! and score is", score);
-            alert(`You've been hit!! but scored ${score}!!!`);
           }
         });
         if (mainBox.intersectsBox(getItShapeBox)) {
+          setText(`You've caught ${catches} / ${goalCatches}`, "yellow");
+          // console.log(catches);
+          bounceBack = true;
+          if (catches >= goalCatches) {
+            // console.log("You've caught it!!! with a score of", score);
+            setText(
+              `You've caught them all!!!   With a score of ${score}!!!`,
+              "yellow"
+            );
+            alert(
+              `You've caught them all!!!   With a score of ${score}!!!`,
+              "yellow"
+            );
             gameOver = true;
-            cancelAnimationFrame(id);
-            console.log("You've caught it!!! with a score of", score);
-            alert(`You've caught it!!! with a score of ${score}!!!`);
           }
-        // console.log(main.position.x);
+        }
         if (jump) {
           main.rotation.x += -0.1;
           main.position.y <= 2.5 ? (djump = djump) : (djump = -djump);
@@ -174,33 +273,41 @@
             turnLeft = false;
           }
         }
-        userInputFunction();
         renderer.render(scene, camera);
       }
       var clientX, clientY, dClientX, dClientY;
       function userInputFunction() {
         document.addEventListener("touchstart", (e) => {
-        clientX = e.changedTouches[0].clientX;
-        clientY = e.changedTouches[0].clientY;
-      })
+          clientX = e.changedTouches[0].clientX;
+          clientY = e.changedTouches[0].clientY;
+        });
         document.addEventListener("touchend", (e) => {
-        dClientX = e.changedTouches[0].clientX - clientX;
-        dClientY = e.changedTouches[0].clientY - clientY;
-        console.log(dClientX)
-        console.log(dClientY)
-        if (dClientY <= -100){
-          main.position.y = 1;
-              main.rotation.x = 0;
-              djump = Math.abs(djump);
-              jump = true;
-        }
-        if (dClientX >= 100){
-          turnRight = true;
-        }
-        if (dClientX <= -100){
-          turnLeft = true;
-        }
-      })
+          dClientX = e.changedTouches[0].clientX - clientX;
+          dClientY = e.changedTouches[0].clientY - clientY;
+          // console.log(dClientX);
+          // console.log(dClientY);
+          if (dClientY <= -100) {
+            main.position.y = 1;
+            main.rotation.x = 0;
+            djump = Math.abs(djump);
+            jump = true;
+          }
+          if (dClientX >= 100) {
+            turnRight = true;
+          }
+          if (dClientX <= -100) {
+            turnLeft = true;
+          }
+
+          if (
+            Math.abs(dClientX) <= 10 &&
+            Math.abs(dClientY && gameOver) <= 10
+          ) {
+            if (gameOver) {
+              restartGame();
+            }
+          }
+        });
         document.addEventListener("keydown", (e) => {
           switch (e.key) {
             case "ArrowUp":
@@ -209,13 +316,20 @@
               djump = Math.abs(djump);
               jump = true;
               break;
+
             case "ArrowRight":
               turnRight = true;
-
               break;
+
             case "ArrowLeft":
               turnLeft = true;
+              break;
 
+            case " ":
+            case "Enter":
+              if (gameOver) {
+                restartGame();
+              }
               break;
 
             default:
@@ -224,8 +338,23 @@
           }
         });
       }
-
+      userInputFunction();
       animate();
+
+      function restartGame() {
+        score = 0;
+        catches = 0;
+        gameOver = false;
+        obstacle.position.z = -25;
+        jumpObstacle.position.z = -15;
+        obstacles.forEach((e) => {
+          e.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        });
+        getItShape.position.z = 0;
+        getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
+        main.position.x = 0;
+        main.rotation.y = 0;
+      }
     </script>
   </body>
 </html>
