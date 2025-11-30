@@ -13,6 +13,7 @@
   </head>
   <body>
     <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <!-- <script src="three.min.js"></script> -->
     <script>
       alert(
         "Welcome to my 3d game!!!!! The goal is to catch the yellow ball without getting hit. Use the arrow keys or swipe to avoid obstacles on the way. Good luck!"
@@ -129,6 +130,8 @@
       const light = new THREE.PointLight(0xffffff, 10);
       light.position.set(0, 4, 10);
       scene.add(light);
+      const ambientlight = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(ambientlight);
       var jump = false;
       var turnRight = false;
       var turnLeft = false;
@@ -291,6 +294,11 @@
             djump = Math.abs(djump);
             jump = true;
           }
+          if (dClientY >= -100) {
+            main.position.y = 1;
+            main.rotation.x = 0;
+            jump = false;
+          }
           if (dClientX >= 100) {
             turnRight = true;
           }
@@ -324,6 +332,12 @@
               turnLeft = true;
               break;
 
+            case "ArrowDown":
+              main.position.y = 1;
+              main.rotation.x = 0;
+              jump = false;
+              break;
+
             case " ":
             case "Enter":
               if (gameOver) {
@@ -353,6 +367,7 @@
         getItShape.position.x = [-1, 0, 1][Math.floor(Math.random() * 3)];
         main.position.x = 0;
         main.rotation.y = 0;
+        setText(`You've caught ${catches} / ${goalCatches}`, "green");
       }
     </script>
   </body>
